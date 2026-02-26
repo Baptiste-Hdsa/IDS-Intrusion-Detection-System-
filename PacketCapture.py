@@ -1,5 +1,4 @@
 from scapy.all import sniff, IP, TCP
-from collections import defaultdict
 import threading
 import queue
 
@@ -12,7 +11,7 @@ class PacketCapture:
         if IP in packet and TCP in packet:
             self.packet_queue.put(packet)
 
-    def start_capture(self, interface="eth0"):
+    def start_capture(self, interface="enp1s0f0"):
         def capture_thread():
             sniff(iface=interface,
                   prn=self.packet_callback,
