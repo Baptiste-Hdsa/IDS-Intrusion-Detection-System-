@@ -1,0 +1,1 @@
+IFACE="wlp2s0"
