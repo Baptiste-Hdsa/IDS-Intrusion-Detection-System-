@@ -1,4 +1,5 @@
 from sklearn.ensemble import IsolationForest
+from sklearn.exceptions import NotFittedError
 import numpy as np
 
 class DetectionEngine:
@@ -48,12 +49,16 @@ class DetectionEngine:
             features['byte_rate']
         ]])
 
-        anomaly_score = self.anomaly_detector.score_samples(feature_vector)[0]
-        if anomaly_score < -0.5:  # Threshold for anomaly detection
-            threats.append({
-                'type': 'anomaly',
-                'score': anomaly_score,
-                'confidence': min(1.0, abs(anomaly_score))
-            })
+        try:
+            anomaly_score = self.anomaly_detector.score_samples(feature_vector)[0]
+            if anomaly_score < -0.5:  # Threshold for anomaly detection
+                threats.append({
+                    'type': 'anomaly',
+                    'score': anomaly_score,
+                    'confidence': min(1.0, abs(anomaly_score))
+                })
+        except NotFittedError:
+            # Skip anomaly detection until the model is trained.
+            pass
 
         return threats

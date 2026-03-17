@@ -1,6 +1,4 @@
 .venv/
+__pycache__/
 TODO.md
-__pycache__/conf.cpython-312.pyc
-__pycache__/config.cpython-312.pyc
-draft.ipynb
-ids_alerts.log
+

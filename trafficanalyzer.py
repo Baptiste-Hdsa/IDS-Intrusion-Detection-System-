@@ -33,11 +33,20 @@ class TrafficAnalyzer:
             return self.extract_features(packet, stats)
 
     def extract_features(self, packet, stats):
+        duration = stats['last_time'] - stats['start_time']
+        if stats['packet_count'] < 2:
+            safe_duration = 1
+        else:
+            safe_duration = duration
+
+        print(f"packet_rate = {stats['packet_count']} / {safe_duration}")
+        print(f"byte_rate = {stats['byte_count']} / {safe_duration}")
         return {
             'packet_size': len(packet),
-            'flow_duration': stats['last_time'] - stats['start_time'],
-            'packet_rate': stats['packet_count'] / (stats['last_time'] - stats['start_time']),
-            'byte_rate': stats['byte_count'] / (stats['last_time'] - stats['start_time']),
+            'flow_duration': duration,
+            'packet_rate': stats['packet_count'] / safe_duration,
+            'byte_rate': stats['byte_count'] / safe_duration,
             'tcp_flags': packet[TCP].flags,
             'window_size': packet[TCP].window
         }
+        
