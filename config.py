@@ -1,1 +1,1 @@
-IFACE="wlp2s0"
+IFACE="enp1s0f0"
