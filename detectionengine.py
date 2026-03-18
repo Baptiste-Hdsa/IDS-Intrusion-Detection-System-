@@ -1,6 +1,7 @@
 from sklearn.ensemble import IsolationForest
 from sklearn.exceptions import NotFittedError
 import numpy as np
+from collections import defaultdict, deque
 
 class DetectionEngine:
     def __init__(self):
@@ -10,6 +11,11 @@ class DetectionEngine:
         )
         self.signature_rules = self.load_signature_rules()
         self.training_data = []
+        self.port_scan_window_seconds = 10
+        self.port_scan_min_distinct_ports = 10
+        self.port_scan_alert_cooldown_seconds = 5
+        self.source_port_history = defaultdict(deque)
+        self.last_port_scan_alert_time = {}
 
     def load_signature_rules(self):
         return {
@@ -18,13 +24,39 @@ class DetectionEngine:
                     features['tcp_flags'] == 2 and  # SYN flag
                     features['packet_rate'] > 100
                 )
-            },
-            'port_scan': {
-                'condition': lambda features: (
-                    features['packet_size'] < 100 and
-                    features['packet_rate'] > 50
-                )
             }
+        }
+
+    def _detect_port_scan(self, features):
+        source_ip = features.get('source_ip')
+        destination_port = features.get('destination_port')
+        packet_time = features.get('timestamp')
+
+        if source_ip is None or destination_port is None or packet_time is None:
+            return None
+
+        history = self.source_port_history[source_ip]
+        history.append((packet_time, destination_port))
+
+        window_start = packet_time - self.port_scan_window_seconds
+        while history and history[0][0] < window_start:
+            history.popleft()
+
+        distinct_ports = {port for _, port in history}
+        if len(distinct_ports) < self.port_scan_min_distinct_ports:
+            return None
+
+        last_alert_time = self.last_port_scan_alert_time.get(source_ip)
+        if last_alert_time is not None and (packet_time - last_alert_time) < self.port_scan_alert_cooldown_seconds:
+            return None
+
+        self.last_port_scan_alert_time[source_ip] = packet_time
+        return {
+            'type': 'signature',
+            'rule': 'port_scan',
+            'confidence': 1.0,
+            'distinct_ports': len(distinct_ports),
+            'window_seconds': self.port_scan_window_seconds
         }
 
     def train_anomaly_detector(self, normal_traffic_data):
@@ -41,6 +73,10 @@ class DetectionEngine:
                     'rule': rule_name,
                     'confidence': 1.0
                 })
+
+        port_scan_threat = self._detect_port_scan(features)
+        if port_scan_threat:
+            threats.append(port_scan_threat)
 
         # Anomaly-based detection
         feature_vector = np.array([[

@@ -26,12 +26,19 @@ class IntrusionDetectionSystem:
                 protocol = 'TCP' if TCP in packet else 'UDP'
                 print(f"Captured {protocol} packet: {packet.summary()}")
                 features = self.traffic_analyzer.analyze_packet(packet)
-                #print(f"Extracted features: {features}")
                 if features:
+                    transport_layer = packet[TCP] if features['type'] == 'TCP' else packet[UDP]
+                    features.update({
+                        'source_ip': packet[IP].src,
+                        'destination_ip': packet[IP].dst,
+                        'source_port': transport_layer.sport,
+                        'destination_port': transport_layer.dport,
+                        'timestamp': float(packet.time)
+                    })
+                    print(features)
                     threats = self.detection_engine.detect_threats(features)
 
                     for threat in threats:
-                        transport_layer = packet[TCP] if features['type'] == 'TCP' else packet[UDP]
                         packet_info = {
                             'source_ip': packet[IP].src,
                             'destination_ip': packet[IP].dst,

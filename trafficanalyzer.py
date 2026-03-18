@@ -52,8 +52,6 @@ class TrafficAnalyzer:
         else:
             safe_duration = duration
 
-        #print(f"packet_rate = {stats['packet_count']} / {safe_duration}")
-        #print(f"byte_rate = {stats['byte_count']} / {safe_duration}")
         return {
             'packet_size': len(packet),
             'flow_duration': duration,
