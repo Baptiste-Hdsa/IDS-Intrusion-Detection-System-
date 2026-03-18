@@ -1,1 +1,1 @@
-IFACE="enp1s0f0"
+IFACE="lo"

@@ -1,4 +1,4 @@
-from scapy.all import sniff, IP, TCP
+from scapy.all import sniff, IP, TCP, UDP
 import threading
 import queue
 import config
@@ -9,7 +9,7 @@ class PacketCapture:
         self.stop_capture = threading.Event()
 
     def packet_callback(self, packet):
-        if IP in packet and TCP in packet:
+        if IP in packet and (TCP in packet or UDP in packet):
             self.packet_queue.put(packet)
 
     def start_capture(self, interface=config.IFACE):

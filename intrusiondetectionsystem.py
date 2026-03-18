@@ -3,7 +3,7 @@ from packetcapture import PacketCapture
 from trafficanalyzer import TrafficAnalyzer
 from detectionengine import DetectionEngine
 from alertsystem import AlertSystem
-from scapy.all import IP, TCP
+from scapy.all import IP, TCP, UDP
 import config
 
 
@@ -23,17 +23,20 @@ class IntrusionDetectionSystem:
         while True:
             try:
                 packet = self.packet_capture.packet_queue.get(timeout=1)
+                protocol = 'TCP' if TCP in packet else 'UDP'
+                print(f"Captured {protocol} packet: {packet.summary()}")
                 features = self.traffic_analyzer.analyze_packet(packet)
-
+                #print(f"Extracted features: {features}")
                 if features:
                     threats = self.detection_engine.detect_threats(features)
 
                     for threat in threats:
+                        transport_layer = packet[TCP] if features['type'] == 'TCP' else packet[UDP]
                         packet_info = {
                             'source_ip': packet[IP].src,
                             'destination_ip': packet[IP].dst,
-                            'source_port': packet[TCP].sport,
-                            'destination_port': packet[TCP].dport
+                            'source_port': transport_layer.sport,
+                            'destination_port': transport_layer.dport
                         }
                         self.alert_system.generate_alert(threat, packet_info)
 

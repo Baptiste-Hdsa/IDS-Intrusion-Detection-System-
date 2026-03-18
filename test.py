@@ -1,4 +1,4 @@
-from scapy.all import IP, TCP
+from scapy.all import IP, TCP, UDP
 from intrusiondetectionsystem import IntrusionDetectionSystem
 
 def test_ids():
@@ -7,6 +7,7 @@ def test_ids():
         # Normal traffic
         IP(src="192.168.1.1", dst="192.168.1.2") / TCP(sport=1234, dport=80, flags="A"),
         IP(src="192.168.1.3", dst="192.168.1.4") / TCP(sport=1235, dport=443, flags="P"),
+        IP(src="192.168.1.5", dst="192.168.1.6") / UDP(sport=5353, dport=53),
 
         # SYN flood simulation
         IP(src="10.0.0.1", dst="192.168.1.2") / TCP(sport=5678, dport=80, flags="S"),
