@@ -23,8 +23,6 @@ class IntrusionDetectionSystem:
         while True:
             try:
                 packet = self.packet_capture.packet_queue.get(timeout=1)
-                protocol = 'TCP' if TCP in packet else 'UDP'
-                print(f"Captured {protocol} packet: {packet.summary()}")
                 features = self.traffic_analyzer.analyze_packet(packet)
                 if features:
                     transport_layer = packet[TCP] if features['type'] == 'TCP' else packet[UDP]
@@ -35,7 +33,6 @@ class IntrusionDetectionSystem:
                         'destination_port': transport_layer.dport,
                         'timestamp': float(packet.time)
                     })
-                    print(features)
                     threats = self.detection_engine.detect_threats(features)
 
                     for threat in threats:

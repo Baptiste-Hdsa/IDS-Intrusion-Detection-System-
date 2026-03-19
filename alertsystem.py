@@ -23,7 +23,7 @@ class AlertSystem:
             'confidence': threat.get('confidence', 0.0),
             'details': threat
         }
-
+        print(f"ALERT: {json.dumps(alert)}")
         self.logger.warning(json.dumps(alert))
 
         if threat['confidence'] > 0.8:
