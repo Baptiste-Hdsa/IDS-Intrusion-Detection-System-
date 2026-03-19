@@ -11,7 +11,7 @@ class DetectionEngine:
         )
         self.signature_rules = self.load_signature_rules()
         self.training_data = []
-        self.port_scan_window_seconds = 10
+        self.port_scan_window_seconds = 10 # Time in seconds window to track ports for port scan detection
         self.port_scan_min_distinct_ports = 10
         self.port_scan_alert_cooldown_seconds = 5
         self.source_port_history = defaultdict(deque)
@@ -27,7 +27,7 @@ class DetectionEngine:
             }
         }
 
-    def _detect_port_scan(self, features):
+    def detect_port_scan(self, features):
         source_ip = features.get('source_ip')
         destination_port = features.get('destination_port')
         packet_time = features.get('timestamp')
@@ -35,8 +35,8 @@ class DetectionEngine:
         if source_ip is None or destination_port is None or packet_time is None:
             return None
 
+        self.source_port_history[source_ip].append((packet_time, destination_port))
         history = self.source_port_history[source_ip]
-        history.append((packet_time, destination_port))
 
         window_start = packet_time - self.port_scan_window_seconds
         while history and history[0][0] < window_start:
@@ -73,8 +73,8 @@ class DetectionEngine:
                     'rule': rule_name,
                     'confidence': 1.0
                 })
-
-        port_scan_threat = self._detect_port_scan(features)
+        # Port scan detection
+        port_scan_threat = self.detect_port_scan(features)
         if port_scan_threat:
             threats.append(port_scan_threat)
 
