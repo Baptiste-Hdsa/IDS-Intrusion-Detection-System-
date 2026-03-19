@@ -46,13 +46,13 @@ class TrafficAnalyzer:
         return self.extract_features(packet, stats)
 
     def extract_features(self, packet, stats):
-        duration = stats['last_time'] - stats['start_time'] if stats['start_time'] == stats['last_time'] else 1
+        duration = max(float(stats['last_time'] - stats['start_time']), 1e-6)
 
         return {
             'packet_size': len(packet),
             'flow_duration': duration,
-            'packet_rate': stats['packet_count'] / duration if duration > 0 else 0,
-            'byte_rate': stats['byte_count'] / duration if duration > 0 else 0,
+            'packet_rate': stats['packet_count'] / duration,
+            'byte_rate': stats['byte_count'] / duration,
             'tcp_flags': packet[TCP].flags if stats['type'] == 'TCP' else 0,
             'window_size': packet[TCP].window if stats['type'] == 'TCP' else 0,
             'type': stats['type']

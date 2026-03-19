@@ -1,6 +1,22 @@
 from scapy.all import IP, TCP, UDP
 from intrusiondetectionsystem import IntrusionDetectionSystem
 
+
+def enrich_features(packet, features):
+    if features['type'] == 'TCP':
+        transport_layer = packet[TCP]
+    else:
+        transport_layer = packet[UDP]
+
+    features.update({
+        'source_ip': packet[IP].src,
+        'destination_ip': packet[IP].dst,
+        'source_port': transport_layer.sport,
+        'destination_port': transport_layer.dport,
+        'timestamp': float(packet.time)
+    })
+
+
 def test_ids():
     # Create test packets to simulate various scenarios
     test_packets = [
@@ -14,9 +30,12 @@ def test_ids():
         IP(src="10.0.0.2", dst="192.168.1.2") / TCP(sport=5679, dport=80, flags="S"),
         IP(src="10.0.0.3", dst="192.168.1.2") / TCP(sport=5680, dport=80, flags="S"),
 
-        # Port scan simulation
+        # Port scan simulation (rapid SYN probes to multiple ports)
+        IP(src="192.168.1.100", dst="192.168.1.2") / TCP(sport=4321, dport=20, flags="S"),
+        IP(src="192.168.1.100", dst="192.168.1.2") / TCP(sport=4321, dport=21, flags="S"),
         IP(src="192.168.1.100", dst="192.168.1.2") / TCP(sport=4321, dport=22, flags="S"),
         IP(src="192.168.1.100", dst="192.168.1.2") / TCP(sport=4321, dport=23, flags="S"),
+        IP(src="192.168.1.100", dst="192.168.1.2") / TCP(sport=4321, dport=24, flags="S"),
         IP(src="192.168.1.100", dst="192.168.1.2") / TCP(sport=4321, dport=25, flags="S"),
     ]
 
@@ -31,6 +50,8 @@ def test_ids():
         features = ids.traffic_analyzer.analyze_packet(packet)
 
         if features:
+            enrich_features(packet, features)
+
             # Detect threats based on features
             threats = ids.detection_engine.detect_threats(features)
 

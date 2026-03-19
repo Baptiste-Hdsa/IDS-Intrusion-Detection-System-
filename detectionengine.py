@@ -2,6 +2,7 @@
 # from sklearn.exceptions import NotFittedError
 import numpy as np
 from collections import defaultdict, deque
+import config
 
 class DetectionEngine:
     def __init__(self):
@@ -12,9 +13,9 @@ class DetectionEngine:
         # )
         self.signature_rules = self.load_signature_rules()
         self.training_data = []
-        self.port_scan_window_seconds = 10 # Time in seconds window to track ports for port scan detection
-        self.port_scan_min_distinct_ports = 10
-        self.port_scan_alert_cooldown_seconds = 5
+        self.port_scan_window_seconds = config.PORT_SCAN_WINDOW_SECONDS
+        self.port_scan_min_distinct_ports = config.PORT_SCAN_MIN_DISTINCT_PORTS
+        self.port_scan_alert_cooldown_seconds = config.PORT_SCAN_ALERT_COOLDOWN_SECONDS
         self.source_port_history = defaultdict(deque)
         self.last_port_scan_alert_time = {}
 
@@ -30,14 +31,21 @@ class DetectionEngine:
 
     def detect_port_scan(self, features):
         source_ip = features.get('source_ip')
+        destination_ip = features.get('destination_ip')
         destination_port = features.get('destination_port')
         packet_time = features.get('timestamp')
-
-        if source_ip is None or destination_port is None or packet_time is None:
+        protocol = features.get('type')
+        
+        if protocol == 'TCP' and features.get('tcp_flags') != 2:
             return None
 
-        self.source_port_history[source_ip].append((packet_time, destination_port))
-        history = self.source_port_history[source_ip]
+        if source_ip is None or destination_ip is None or destination_port is None or packet_time is None or protocol is None:
+            return None
+
+        scan_key = (source_ip, destination_ip, protocol)
+
+        self.source_port_history[scan_key].append((packet_time, destination_port))
+        history = self.source_port_history[scan_key]
 
         window_start = packet_time - self.port_scan_window_seconds
         while history and history[0][0] < window_start:
@@ -47,17 +55,20 @@ class DetectionEngine:
         if len(distinct_ports) < self.port_scan_min_distinct_ports:
             return None
 
-        last_alert_time = self.last_port_scan_alert_time.get(source_ip)
+        last_alert_time = self.last_port_scan_alert_time.get(scan_key)
         if last_alert_time is not None and (packet_time - last_alert_time) < self.port_scan_alert_cooldown_seconds:
             return None
 
-        self.last_port_scan_alert_time[source_ip] = packet_time
+        self.last_port_scan_alert_time[scan_key] = packet_time
         return {
             'type': 'signature',
             'rule': 'port_scan',
             'confidence': 1.0,
             'distinct_ports': len(distinct_ports),
-            'window_seconds': self.port_scan_window_seconds
+            'window_seconds': self.port_scan_window_seconds,
+            'source_ip': source_ip,
+            'destination_ip': destination_ip,
+            'protocol': protocol
         }
 
     def train_anomaly_detector(self, normal_traffic_data):
