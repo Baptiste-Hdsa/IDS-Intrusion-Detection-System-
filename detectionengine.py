@@ -1,14 +1,15 @@
-from sklearn.ensemble import IsolationForest
-from sklearn.exceptions import NotFittedError
+# from sklearn.ensemble import IsolationForest
+# from sklearn.exceptions import NotFittedError
 import numpy as np
 from collections import defaultdict, deque
 
 class DetectionEngine:
     def __init__(self):
-        self.anomaly_detector = IsolationForest(
-            contamination=0.1,
-            random_state=42
-        )
+        # Isolation Forest temporairement désactivé.
+        # self.anomaly_detector = IsolationForest(
+        #     contamination=0.1,
+        #     random_state=42
+        # )
         self.signature_rules = self.load_signature_rules()
         self.training_data = []
         self.port_scan_window_seconds = 10 # Time in seconds window to track ports for port scan detection
@@ -60,7 +61,9 @@ class DetectionEngine:
         }
 
     def train_anomaly_detector(self, normal_traffic_data):
-        self.anomaly_detector.fit(normal_traffic_data)
+        # Isolation Forest temporairement désactivé.
+        # self.anomaly_detector.fit(normal_traffic_data)
+        pass
 
     def detect_threats(self, features):
         threats = []
@@ -78,23 +81,23 @@ class DetectionEngine:
         if port_scan_threat:
             threats.append(port_scan_threat)
 
-        # Anomaly-based detection
-        feature_vector = np.array([[
-            features['packet_size'],
-            features['packet_rate'],
-            features['byte_rate']
-        ]])
-
-        try:
-            anomaly_score = self.anomaly_detector.score_samples(feature_vector)[0]
-            if anomaly_score < -0.5:  # Threshold for anomaly detection
-                threats.append({
-                    'type': 'anomaly',
-                    'score': anomaly_score,
-                    'confidence': min(1.0, abs(anomaly_score))
-                })
-        except NotFittedError:
-            # Skip anomaly detection until the model is trained.
-            pass
+        # Isolation Forest temporairement désactivé.
+        # feature_vector = np.array([[
+        #     features['packet_size'],
+        #     features['packet_rate'],
+        #     features['byte_rate']
+        # ]])
+        #
+        # try:
+        #     anomaly_score = self.anomaly_detector.score_samples(feature_vector)[0]
+        #     if anomaly_score < -0.5:  # Threshold for anomaly detection
+        #         threats.append({
+        #             'type': 'anomaly',
+        #             'score': anomaly_score,
+        #             'confidence': min(1.0, abs(anomaly_score))
+        #         })
+        # except NotFittedError:
+        #     # Skip anomaly detection until the model is trained.
+        #     pass
 
         return threats
