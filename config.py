@@ -1,4 +1,4 @@
-IFACE = "lo"
+IFACE = "enp1s0f0"
 
 # Minimum observation window used to smooth flow rates.
 RATE_MIN_WINDOW_SECONDS = 1.0

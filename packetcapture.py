@@ -11,6 +11,7 @@ class PacketCapture:
     def packet_callback(self, packet):
         if IP in packet and (TCP in packet or UDP in packet):
             self.packet_queue.put(packet)
+        
 
     def start_capture(self, interface=config.IFACE):
         def capture_thread():

@@ -111,5 +111,4 @@ class DetectionEngine:
         except NotFittedError:
             # Skip anomaly detection until the model is trained.
             pass
-
         return threats

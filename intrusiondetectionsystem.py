@@ -3,9 +3,9 @@ from packetcapture import PacketCapture
 from trafficanalyzer import TrafficAnalyzer
 from detectionengine import DetectionEngine
 from alertsystem import AlertSystem
+from plotgraph import PlotGraph
 from scapy.all import IP, TCP, UDP
 import config
-
 
 class IntrusionDetectionSystem:
     def __init__(self, interface=config.IFACE):
@@ -13,7 +13,7 @@ class IntrusionDetectionSystem:
         self.traffic_analyzer = TrafficAnalyzer()
         self.detection_engine = DetectionEngine()
         self.alert_system = AlertSystem()
-
+        self.plot_graph = PlotGraph()
         self.interface = interface
 
     def start(self):
@@ -34,6 +34,9 @@ class IntrusionDetectionSystem:
                         'timestamp': float(packet.time)
                     })
                     threats = self.detection_engine.detect_threats(features)
+                    is_anomaly = any(threat.get('type') == 'anomaly' for threat in threats)
+                    self.plot_graph.add_data_point(features, is_anomaly)
+                    self.plot_graph.update_plot()
 
                     for threat in threats:
                         packet_info = {
@@ -43,11 +46,12 @@ class IntrusionDetectionSystem:
                             'destination_port': transport_layer.dport
                         }
                         self.alert_system.generate_alert(threat, packet_info)
-
+                        
             except queue.Empty:
                 continue
             except KeyboardInterrupt:
                 print("Stopping IDS...")
+                self.plot_graph.stop()
                 self.packet_capture.stop()
                 break
 

@@ -14,9 +14,6 @@ class TrafficAnalyzer:
         })
 
     def analyze_packet(self, packet):
-        if IP not in packet:
-            return None
-
         ip_src = packet[IP].src
         ip_dst = packet[IP].dst
 
