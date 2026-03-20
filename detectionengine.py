@@ -98,14 +98,15 @@ class DetectionEngine:
         clf = self.anomaly_detector.fit(self.training_data)
         
         try:
-            anomaly_score = clf.score_samples(self.training_data)
+            training_data_array = np.array(self.training_data)
+            anomaly_score = clf.score_samples(training_data_array)
             threshold = np.percentile(anomaly_score, 2)
-            anomaly = self.training_data[anomaly_score < threshold]
-            if anomaly.size > 0:
+            anomaly_mask = anomaly_score < threshold
+            if np.any(anomaly_mask):
                 threats.append({
                     'type': 'anomaly',
-                    'score': anomaly_score,
-                    'confidence': min(1.0, abs(anomaly_score))
+                    'score': float(np.min(anomaly_score[anomaly_mask])),
+                    'confidence': min(1.0, abs(float(np.min(anomaly_score[anomaly_mask]))))
                 })
         except NotFittedError:
             # Skip anomaly detection until the model is trained.
