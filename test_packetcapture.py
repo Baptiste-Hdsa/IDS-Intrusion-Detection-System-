@@ -1,6 +1,7 @@
 from scapy.all import sniff
 import threading
 import queue
+
 import config
 
 packet_queue = queue.Queue()

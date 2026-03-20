@@ -93,7 +93,6 @@ class DetectionEngine:
             features['packet_size'],
             features['packet_rate'],
             features['byte_rate']
-            #features['timestamp'] # I not sure yet
         ]])
         self.training_data.append(feature_vector.flatten())
         clf = self.anomaly_detector.fit(self.training_data)
