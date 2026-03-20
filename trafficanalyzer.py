@@ -1,5 +1,6 @@
 from collections import defaultdict
 from scapy.all import IP, TCP, UDP
+import config
 
 class TrafficAnalyzer:
     def __init__(self):
@@ -46,13 +47,18 @@ class TrafficAnalyzer:
         return self.extract_features(packet, stats)
 
     def extract_features(self, packet, stats):
-        duration = max(float(stats['last_time'] - stats['start_time']), 1e-6)
+        duration = max(float(stats['last_time'] - stats['start_time']), 0.0)
+
+        # Smooth rates to avoid extreme values when the flow is very recent.
+        rate_window = max(duration, config.RATE_MIN_WINDOW_SECONDS)
+        packet_rate = stats['packet_count'] / rate_window
+        byte_rate = stats['byte_count'] / rate_window
 
         return {
             'packet_size': len(packet),
             'flow_duration': duration,
-            'packet_rate': stats['packet_count'] / duration,
-            'byte_rate': stats['byte_count'] / duration,
+            'packet_rate': packet_rate,
+            'byte_rate': byte_rate,
             'tcp_flags': packet[TCP].flags if stats['type'] == 'TCP' else 0,
             'window_size': packet[TCP].window if stats['type'] == 'TCP' else 0,
             'type': stats['type']
