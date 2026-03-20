@@ -95,10 +95,14 @@ class DetectionEngine:
             features['byte_rate']
             #features['timestamp'] # I not sure yet
         ]])
+        self.training_data.append(feature_vector.flatten())
+        clf = self.anomaly_detector.fit(self.training_data)
         
         try:
-            anomaly_score = self.anomaly_detector.score_samples(feature_vector)[0]
-            if anomaly_score < -0.5:  # Threshold for anomaly detection
+            anomaly_score = clf.score_samples(self.training_data)
+            threshold = np.percentile(anomaly_score, 2)
+            anomaly = self.training_data[anomaly_score < threshold]
+            if anomaly.size > 0:
                 threats.append({
                     'type': 'anomaly',
                     'score': anomaly_score,
