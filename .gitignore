@@ -4,3 +4,6 @@ draft.py
 ids_alerts.log
 draft.ipynb
 __pycache__/*
+test_isolation_forest.ipynb
+test_packetcapture.py
+test_trafficanalyzer.py
