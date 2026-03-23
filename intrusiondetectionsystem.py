@@ -27,8 +27,11 @@ class IntrusionDetectionSystem:
                 
                 if features:
                     threats = self.detection_engine.detect_threats(features)
-                    is_anomaly = any(threat.get('type') == 'anomaly' for threat in threats)
-                    self.plot_graph.add_data_point(features, is_anomaly)
+                    anomaly_threats = [threat for threat in threats if threat.get('type') == 'anomaly']
+                    is_anomaly = bool(anomaly_threats)
+                    anomaly_score = min((threat.get('score', 0.0) for threat in anomaly_threats), default=0.0)
+                    anomaly_confidence = max((threat.get('confidence', 0.0) for threat in anomaly_threats), default=0.0)
+                    self.plot_graph.add_data_point(features, is_anomaly, anomaly_score, anomaly_confidence)
                     self.plot_graph.update_plot()
 
                     for threat in threats:
