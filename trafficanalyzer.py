@@ -180,6 +180,7 @@ class TrafficAnalyzer:
             'broadcast_or_multicast': broadcast_or_multicast,
             'is_private_to_private': is_private_to_private,
             'service_features': service_one_hot,
-            'packet_size_zscore_rolling': stats['packet_size_zscore_rolling']
+            'packet_size_zscore_rolling': stats['packet_size_zscore_rolling'],
+            'packet_rate_zscore_rolling': stats['packet_rate_zscore_rolling']
         }
         

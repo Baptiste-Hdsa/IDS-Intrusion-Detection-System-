@@ -104,8 +104,8 @@ class DetectionEngine:
             features["service_features"]["service_dhcp"],
             features["service_features"]["service_other"],
             features["packet_size_zscore_rolling"],
-            features["service_port_class"],
-
+            features["packet_rate_zscore_rolling"],
+            features["service_port_class"]
         ]], dtype=float)
 
         self.seen_packets += 1
