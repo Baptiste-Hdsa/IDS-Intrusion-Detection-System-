@@ -80,7 +80,14 @@ class DetectionEngine:
         x = np.array([[
             features["packet_size"],
             features["packet_rate"],
-            features["byte_rate"]
+            features["byte_rate"],
+            features["tcp_flags"],
+            features["window_size"],
+            features["inter_arrival_times_moy"],
+            features["inter_arrival_times_std"],
+            features["ratio_tcp_syn"],
+            features["ratio_tcp_rst"],
+            features["ratio_tcp_ack"]
         ]], dtype=float)
 
         self.seen_packets += 1
