@@ -10,8 +10,12 @@ class TrafficAnalyzer:
             'byte_count': 0,
             'start_time': None,
             'last_time': None,
-            'type': ''
+            'type': '',
+            'inter_arrival_times_moy': 0.0,
+            'inter_arrival_times_std': 0.0
         })
+        self.history_timestamp = defaultdict(list)
+        self.delta_time_history = defaultdict(list)
 
     def analyze_packet(self, packet):
         ip_src = packet[IP].src
@@ -40,6 +44,16 @@ class TrafficAnalyzer:
         if stats['start_time'] is None:
             stats['start_time'] = current_time
         stats['last_time'] = current_time
+        
+
+        self.history_timestamp[flow_key].append(current_time)
+        delta_time = current_time - self.history_timestamp[flow_key][-2] if len(self.history_timestamp[flow_key]) > 1 else 1.0
+        self.delta_time_history[flow_key].append(delta_time)
+
+        deltas = self.delta_time_history[flow_key]
+        stats['inter_arrival_times_moy'] = sum(deltas) / len(deltas) if deltas else 0.0
+        means = stats['inter_arrival_times_moy']
+        stats['inter_arrival_times_std'] = sum((dt - means) ** 2 for dt in deltas) / len(deltas) if deltas else 0.0
 
         return self.extract_features(packet, stats)
 
@@ -50,6 +64,8 @@ class TrafficAnalyzer:
         rate_window = max(duration, config.RATE_MIN_WINDOW_SECONDS)
         packet_rate = stats['packet_count'] / rate_window
         byte_rate = stats['byte_count'] / rate_window
+        transport_layer = packet[TCP] if stats['type'] == 'TCP' else packet[UDP]
+
 
         return {
             'packet_size': len(packet),
@@ -58,6 +74,13 @@ class TrafficAnalyzer:
             'byte_rate': byte_rate,
             'tcp_flags': packet[TCP].flags if stats['type'] == 'TCP' else 0,
             'window_size': packet[TCP].window if stats['type'] == 'TCP' else 0,
-            'type': stats['type']
+            'type': stats['type'],
+            'source_ip': packet[IP].src,
+            'destination_ip': packet[IP].dst,
+            'source_port': transport_layer.sport,
+            'destination_port': transport_layer.dport,
+            'timestamp': float(packet.time),
+            'inter_arrival_times_moy': stats['inter_arrival_times_moy'],
+            'inter_arrival_times_std': stats['inter_arrival_times_std']
         }
         

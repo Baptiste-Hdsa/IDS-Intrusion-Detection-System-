@@ -24,15 +24,8 @@ class IntrusionDetectionSystem:
             try:
                 packet = self.packet_capture.packet_queue.get(timeout=1)
                 features = self.traffic_analyzer.analyze_packet(packet)
+                
                 if features:
-                    transport_layer = packet[TCP] if features['type'] == 'TCP' else packet[UDP]
-                    features.update({
-                        'source_ip': packet[IP].src,
-                        'destination_ip': packet[IP].dst,
-                        'source_port': transport_layer.sport,
-                        'destination_port': transport_layer.dport,
-                        'timestamp': float(packet.time)
-                    })
                     threats = self.detection_engine.detect_threats(features)
                     is_anomaly = any(threat.get('type') == 'anomaly' for threat in threats)
                     self.plot_graph.add_data_point(features, is_anomaly)
@@ -42,8 +35,8 @@ class IntrusionDetectionSystem:
                         packet_info = {
                             'source_ip': packet[IP].src,
                             'destination_ip': packet[IP].dst,
-                            'source_port': transport_layer.sport,
-                            'destination_port': transport_layer.dport
+                            'source_port': threat.get('source_port'),
+                            'destination_port': threat.get('destination_port')
                         }
                         self.alert_system.generate_alert(threat, packet_info)
                         
