@@ -81,13 +81,11 @@ class DetectionEngine:
             features["packet_size"],
             features['source_port'],
             features['destination_port'],
-            features['source_ip'],
-            features['destination_ip'],
             features["packet_rate"],
             features["byte_rate"],
             features["tcp_flags"],
             features["window_size"],
-            features["inter_arrival_times_moy"],
+            features["inter_arrival_times_mean"],
             features["inter_arrival_times_std"],
             features["ratio_tcp_syn"],
             features["ratio_tcp_rst"],
@@ -95,7 +93,6 @@ class DetectionEngine:
             features["is_tcp"],
             features["broadcast_or_multicast"],
             features["is_private_to_private"],
-            features["service_features"]["service_ftp"],
             features["service_features"]["service_dns"],
             features["service_features"]["service_http"],
             features["service_features"]["service_https"],
@@ -104,8 +101,7 @@ class DetectionEngine:
             features["service_features"]["service_dhcp"],
             features["service_features"]["service_other"],
             features["packet_size_zscore_rolling"],
-            features["packet_rate_zscore_rolling"],
-            features["service_port_class"]
+            features["packet_rate_zscore_rolling"]
         ]], dtype=float)
 
         self.seen_packets += 1

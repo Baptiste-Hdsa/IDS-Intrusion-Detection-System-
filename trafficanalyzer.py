@@ -15,7 +15,7 @@ class TrafficAnalyzer:
             'packet_rate': 0.0,
             'byte_rate': 0.0,
             'type': '',
-            'inter_arrival_times_moy': 0.0,
+            'inter_arrival_times_mean': 0.0,
             'inter_arrival_times_std': 0.0,
             'tcp_count': 0,
             'syn_count': 0,
@@ -30,6 +30,9 @@ class TrafficAnalyzer:
         })
         self.history_timestamp = defaultdict(list)
         self.delta_time_history = defaultdict(list)
+        self.packet_rate_history = defaultdict(
+            lambda: deque(maxlen=config.PACKET_RATE_ZSCORE_WINDOW)
+        )
         self.packet_size_history = defaultdict(
             lambda: deque(maxlen=config.PACKET_SIZE_ZSCORE_WINDOW)
         )
@@ -78,20 +81,30 @@ class TrafficAnalyzer:
 
 
         self.history_timestamp[flow_key].append(current_time)
-        delta_time = current_time - self.history_timestamp[flow_key][-2] if len(self.history_timestamp[flow_key]) > 1 else 1.0
-        self.delta_time_history[flow_key].append(delta_time)
+        if len(self.history_timestamp[flow_key]) > 1:
+            delta_time = current_time - self.history_timestamp[flow_key][-2]
+            self.delta_time_history[flow_key].append(delta_time)
         self.packet_size_history[flow_key].append(len(packet))
 
         # Calculate inter-arrival time statistics
         delta_times = self.delta_time_history[flow_key]
-        stats['inter_arrival_times_moy'] = sum(delta_times) / len(delta_times) if delta_times else 0.0
-        means_times = stats['inter_arrival_times_moy']
-        stats['inter_arrival_times_std'] = sqrt(sum((dt - means_times) ** 2 for dt in delta_times) / len(delta_times) if delta_times else 0.0)
+        stats['inter_arrival_times_mean'] = sum(delta_times) / len(delta_times) if delta_times else 0.0
+        mean_time = stats['inter_arrival_times_mean']
+        stats['inter_arrival_times_std'] = sqrt(sum((dt - mean_time) ** 2 for dt in delta_times) / len(delta_times) if delta_times else 0.0)
+
+        duration = max(float(stats['last_time'] - stats['start_time']), 0.0)
+        rate_window = max(duration, config.RATE_MIN_WINDOW_SECONDS)
+        stats['packet_rate'] = stats['packet_count'] / rate_window
+        stats['byte_rate'] = stats['byte_count'] / rate_window
+
+        packet_size = len(packet)
+        packet_rate = stats['packet_rate']
+        self.packet_rate_history[flow_key].append(packet_rate)
 
         packet_sizes = self.packet_size_history[flow_key]
-        stats['packet_size_zscore_rolling'] = self.zscore_rolling(flow_key, packet_sizes)
-        packet_rate = stats['packet_count'] / max(current_time - stats['start_time'], config.RATE_MIN_WINDOW_SECONDS)
-        stats['packet_rate_zscore_rolling'] = self.zscore_rolling(flow_key, packet_rate)
+        packet_rates = self.packet_rate_history[flow_key]
+        stats['packet_size_zscore_rolling'] = self.zscore_rolling(packet_sizes, packet_size, config.PACKET_SIZE_ZSCORE_MIN_SAMPLES)
+        stats['packet_rate_zscore_rolling'] = self.zscore_rolling(packet_rates, packet_rate, config.PACKET_RATE_ZSCORE_MIN_SAMPLES)
 
         return self.extract_features(packet, stats)
 
@@ -125,14 +138,13 @@ class TrafficAnalyzer:
         one_hot[f"service_{service}"] = 1
         return one_hot
 
-    def zscore_rolling(self, flow_key, packet_size):
-        history = self.packet_size_history[flow_key]
-        if len(history) < config.PACKET_SIZE_ZSCORE_MIN_SAMPLES:
+    def zscore_rolling(self, history, value, min_samples):
+        if len(history) < min_samples:
             return 0.0
-        mean_size = sum(history) / len(history)
-        variance = sum((size - mean_size) ** 2 for size in history) / len(history)
-        std_size = sqrt(variance)
-        return (packet_size - mean_size) / (std_size if std_size > 0 else 1 )
+        mean_value = sum(history) / len(history)
+        variance = sum((item - mean_value) ** 2 for item in history) / len(history)
+        std_value = sqrt(variance)
+        return (value - mean_value) / (std_value + config.ZSCORE_EPSILON)
 
     def extract_features(self, packet, stats):
         duration = max(float(stats['last_time'] - stats['start_time']), 0.0)
@@ -171,7 +183,7 @@ class TrafficAnalyzer:
             'source_port': sport,
             'destination_port': dport,
             'timestamp': float(packet.time),
-            'inter_arrival_times_moy': stats['inter_arrival_times_moy'],
+            'inter_arrival_times_mean': stats['inter_arrival_times_mean'],
             'inter_arrival_times_std': stats['inter_arrival_times_std'],
             'ratio_tcp_syn': stats['ratio_tcp_syn'],
             'ratio_tcp_rst': stats['ratio_tcp_rst'],

@@ -34,7 +34,7 @@ def main():
     capture_thread.start()
     printer_thread.start()
 
-    print("Capture en cours. Appuie sur Entree ou Ctrl+C pour arreter...")
+    print("Capture running. Press Enter or Ctrl+C to stop...")
     try:
         input()
     except KeyboardInterrupt:
@@ -43,7 +43,7 @@ def main():
         stop_event.set()
         capture_thread.join(timeout=2)
         printer_thread.join(timeout=2)
-        print("Capture arretee.")
+        print("Capture stopped.")
 
 
 if __name__ == "__main__":
