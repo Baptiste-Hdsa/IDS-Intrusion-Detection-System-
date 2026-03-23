@@ -1,4 +1,4 @@
-from collections import defaultdict
+from collections import defaultdict, deque
 from scapy.all import IP, TCP, UDP
 import config
 from math import sqrt
@@ -12,6 +12,8 @@ class TrafficAnalyzer:
             'byte_count': 0,
             'start_time': None,
             'last_time': None,
+            'packet_rate': 0.0,
+            'byte_rate': 0.0,
             'type': '',
             'inter_arrival_times_moy': 0.0,
             'inter_arrival_times_std': 0.0,
@@ -22,10 +24,15 @@ class TrafficAnalyzer:
             'ratio_tcp_syn': 0.0,
             'ratio_tcp_rst': 0.0,
             'ratio_tcp_ack': 0.0,
-            'is_tcp': None #TCP=1, UDP=0, None=Unknown
+            'is_tcp': None, #TCP=1, UDP=0, None=Unknown
+            'packet_size_zscore_rolling': 0.0,
+            'packet_rate_zscore_rolling': 0.0
         })
         self.history_timestamp = defaultdict(list)
         self.delta_time_history = defaultdict(list)
+        self.packet_size_history = defaultdict(
+            lambda: deque(maxlen=config.PACKET_SIZE_ZSCORE_WINDOW)
+        )
 
     def analyze_packet(self, packet):
         ip_src = packet[IP].src
@@ -73,12 +80,18 @@ class TrafficAnalyzer:
         self.history_timestamp[flow_key].append(current_time)
         delta_time = current_time - self.history_timestamp[flow_key][-2] if len(self.history_timestamp[flow_key]) > 1 else 1.0
         self.delta_time_history[flow_key].append(delta_time)
+        self.packet_size_history[flow_key].append(len(packet))
 
         # Calculate inter-arrival time statistics
-        deltas = self.delta_time_history[flow_key]
-        stats['inter_arrival_times_moy'] = sum(deltas) / len(deltas) if deltas else 0.0
-        means = stats['inter_arrival_times_moy']
-        stats['inter_arrival_times_std'] = sqrt(sum((dt - means) ** 2 for dt in deltas) / len(deltas) if deltas else 0.0)
+        delta_times = self.delta_time_history[flow_key]
+        stats['inter_arrival_times_moy'] = sum(delta_times) / len(delta_times) if delta_times else 0.0
+        means_times = stats['inter_arrival_times_moy']
+        stats['inter_arrival_times_std'] = sqrt(sum((dt - means_times) ** 2 for dt in delta_times) / len(delta_times) if delta_times else 0.0)
+
+        packet_sizes = self.packet_size_history[flow_key]
+        stats['packet_size_zscore_rolling'] = self.zscore_rolling(flow_key, packet_sizes)
+        packet_rate = stats['packet_count'] / max(current_time - stats['start_time'], config.RATE_MIN_WINDOW_SECONDS)
+        stats['packet_rate_zscore_rolling'] = self.zscore_rolling(flow_key, packet_rate)
 
         return self.extract_features(packet, stats)
 
@@ -112,16 +125,25 @@ class TrafficAnalyzer:
         one_hot[f"service_{service}"] = 1
         return one_hot
 
+    def zscore_rolling(self, flow_key, packet_size):
+        history = self.packet_size_history[flow_key]
+        if len(history) < config.PACKET_SIZE_ZSCORE_MIN_SAMPLES:
+            return 0.0
+        mean_size = sum(history) / len(history)
+        variance = sum((size - mean_size) ** 2 for size in history) / len(history)
+        std_size = sqrt(variance)
+        return (packet_size - mean_size) / (std_size if std_size > 0 else 1 )
+
     def extract_features(self, packet, stats):
         duration = max(float(stats['last_time'] - stats['start_time']), 0.0)
 
         # Smooth rates to avoid extreme values when the flow is very recent.
-        rate_window = max(duration, config.RATE_MIN_WINDOW_SECONDS)
-        packet_rate = stats['packet_count'] / rate_window
-        byte_rate = stats['byte_count'] / rate_window
         source_ip = packet[IP].src
-        broadcast_or_multicast = 1 if ip_address(source_ip).is_multicast or ip_address(source_ip).is_broadcast else 0
-        is_private_to_private = 1 if ip_address(source_ip).is_private and ip_address(packet[IP].dst).is_private else 0
+        destination_ip = packet[IP].dst
+        destination_addr = ip_address(destination_ip)
+        broadcast_or_multicast = 1 if destination_addr.is_multicast or destination_ip == "255.255.255.255" else 0
+        is_private_to_private = 1 if ip_address(source_ip).is_private and destination_addr.is_private else 0
+        packet_size = len(packet)
 
         # Calculate TCP flag ratios
         if stats['tcp_count'] > 0:
@@ -137,10 +159,10 @@ class TrafficAnalyzer:
         service_one_hot = self.service_one_hot(dport)
 
         return {
-            'packet_size': len(packet),
+            'packet_size': packet_size,
             'flow_duration': duration,
-            'packet_rate': packet_rate,
-            'byte_rate': byte_rate,
+            'packet_rate': stats['packet_rate'],
+            'byte_rate': stats['byte_rate'],
             'tcp_flags': packet[TCP].flags if stats['type'] == 'TCP' else 0,
             'window_size': packet[TCP].window if stats['type'] == 'TCP' else 0,
             'type': stats['type'],
@@ -154,8 +176,10 @@ class TrafficAnalyzer:
             'ratio_tcp_syn': stats['ratio_tcp_syn'],
             'ratio_tcp_rst': stats['ratio_tcp_rst'],
             'ratio_tcp_ack': stats['ratio_tcp_ack'],
+            'is_tcp': stats['is_tcp'],
             'broadcast_or_multicast': broadcast_or_multicast,
             'is_private_to_private': is_private_to_private,
-            'service_features': service_one_hot
+            'service_features': service_one_hot,
+            'packet_size_zscore_rolling': stats['packet_size_zscore_rolling']
         }
         
