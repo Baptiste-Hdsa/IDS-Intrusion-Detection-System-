@@ -31,7 +31,7 @@ class PlotGraph:
         })
         self.points_since_draw += 1
 
-    def _rolling_anomaly_rate(self, anomaly_flags):
+    def rolling_anomaly_rate(self, anomaly_flags):
         window = max(1, config.PLOT_ANOMALY_RATE_WINDOW)
         running = 0
         rolling = []
@@ -106,7 +106,7 @@ class PlotGraph:
         ax_rate.set_xlabel('Sample Index')
         ax_rate.set_ylabel('Rate (%)')
         ax_rate.grid(True)
-        rolling_rate = self._rolling_anomaly_rate(anomaly_flags)
+        rolling_rate = self.rolling_anomaly_rate(anomaly_flags)
         ax_rate.plot(rolling_rate, color='tab:red', linewidth=1.2)
         ax_rate.set_ylim(0, 100)
 

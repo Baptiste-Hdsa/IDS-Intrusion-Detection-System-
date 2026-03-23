@@ -24,6 +24,13 @@ class DetectionEngine:
         self.seen_packets = 0
         self.is_model_fitted = False
 
+    @staticmethod
+    def safe_float(value, default=0.0):
+        try:
+            return float(value)
+        except (TypeError, ValueError):
+            return float(default)
+
     def load_signature_rules(self):
         return {
             'syn_flood': {
@@ -77,31 +84,33 @@ class DetectionEngine:
         }
     
     def anomaly_detection(self, features, threats):
+        service_features = features.get("service_features", {})
+        f = self.safe_float
         x = np.array([[
-            features["packet_size"],
-            features['source_port'],
-            features['destination_port'],
-            features["packet_rate"],
-            features["byte_rate"],
-            features["tcp_flags"],
-            features["window_size"],
-            features["inter_arrival_times_mean"],
-            features["inter_arrival_times_std"],
-            features["ratio_tcp_syn"],
-            features["ratio_tcp_rst"],
-            features["ratio_tcp_ack"],
-            features["is_tcp"],
-            features["broadcast_or_multicast"],
-            features["is_private_to_private"],
-            features["service_features"]["service_dns"],
-            features["service_features"]["service_http"],
-            features["service_features"]["service_https"],
-            features["service_features"]["service_mdns"],
-            features["service_features"]["service_ssdp"],
-            features["service_features"]["service_dhcp"],
-            features["service_features"]["service_other"],
-            features["packet_size_zscore_rolling"],
-            features["packet_rate_zscore_rolling"]
+            f(features.get("packet_size")),
+            f(features.get('source_port')),
+            f(features.get('destination_port')),
+            f(features.get("packet_rate")),
+            f(features.get("byte_rate")),
+            f(features.get("tcp_flags")),
+            f(features.get("window_size")),
+            f(features.get("inter_arrival_times_mean")),
+            f(features.get("inter_arrival_times_std")),
+            f(features.get("ratio_tcp_syn")),
+            f(features.get("ratio_tcp_rst")),
+            f(features.get("ratio_tcp_ack")),
+            f(features.get("is_tcp")),
+            f(features.get("broadcast_or_multicast")),
+            f(features.get("is_private_to_private")),
+            f(service_features.get("service_dns")),
+            f(service_features.get("service_http")),
+            f(service_features.get("service_https")),
+            f(service_features.get("service_mdns")),
+            f(service_features.get("service_ssdp")),
+            f(service_features.get("service_dhcp")),
+            f(service_features.get("service_other")),
+            f(features.get("packet_size_zscore_rolling")),
+            f(features.get("packet_rate_zscore_rolling"))
         ]], dtype=float)
 
         self.seen_packets += 1
