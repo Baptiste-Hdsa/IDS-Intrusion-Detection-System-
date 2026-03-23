@@ -6,7 +6,7 @@ from matplotlib.figure import Figure
 class PlotGraph:
     def __init__(self):
         self.traffic_data = []
-        self.max_points = 1000
+        self.max_points = 100000
         self.figure: Optional[Figure] = None
         self.axis: Optional[Axes] = None
 
@@ -22,8 +22,8 @@ class PlotGraph:
             'byte_rate': features['byte_rate'],
             'is_anomaly': bool(is_anomaly),
         })
-        if len(self.traffic_data) > self.max_points:
-            self.traffic_data = self.traffic_data[-self.max_points:]
+        # if len(self.traffic_data) > self.max_points:
+        #     self.traffic_data = self.traffic_data[-self.max_points:]
 
     def update_plot(self):
         self.ensure_figure()

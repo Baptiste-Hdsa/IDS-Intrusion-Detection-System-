@@ -7,15 +7,22 @@ import config
 class DetectionEngine:
     def __init__(self):
         self.anomaly_detector = IsolationForest(
-            contamination=0.1, # proportion of outliers in the data set
+            contamination=config.ANOMALY_CONTAMINATION,
+            random_state=42
         )
         self.signature_rules = self.load_signature_rules()
-        self.training_data = []
+        self.training_data = deque(maxlen=config.ANOMALY_MAX_TRAIN_SAMPLES)
         self.port_scan_window_seconds = config.PORT_SCAN_WINDOW_SECONDS
         self.port_scan_min_distinct_ports = config.PORT_SCAN_MIN_DISTINCT_PORTS
         self.port_scan_alert_cooldown_seconds = config.PORT_SCAN_ALERT_COOLDOWN_SECONDS
         self.source_port_history = defaultdict(deque)
         self.last_port_scan_alert_time = {}
+        self.min_train_samples = config.ANOMALY_MIN_TRAIN_SAMPLES
+        self.refit_every = config.ANOMALY_REFIT_EVERY
+        self.anomaly_threshold_percentile = config.ANOMALY_THRESHOLD_PERCENTILE
+        self.anomaly_threshold = None
+        self.seen_packets = 0
+        self.is_model_fitted = False
 
     def load_signature_rules(self):
         return {
@@ -68,9 +75,44 @@ class DetectionEngine:
             'destination_ip': destination_ip,
             'protocol': protocol
         }
+    
+    def anomaly_detection(self, features, threats):
+        x = np.array([[
+            features["packet_size"],
+            features["packet_rate"],
+            features["byte_rate"]
+        ]], dtype=float)
 
-    def train_anomaly_detector(self, normal_traffic_data):
-        self.anomaly_detector.fit(normal_traffic_data)
+        self.seen_packets += 1
+        self.training_data.append(x.flatten())
+
+        if len(self.training_data) < self.min_train_samples:
+            return
+
+        if (not self.is_model_fitted) or (self.seen_packets % self.refit_every == 0):
+            train_arr = np.array(self.training_data, dtype=float)
+            self.anomaly_detector.fit(train_arr)
+            train_scores = self.anomaly_detector.score_samples(train_arr)
+            self.anomaly_threshold = float(
+                np.percentile(train_scores, self.anomaly_threshold_percentile)
+            )
+            self.is_model_fitted = True
+
+        try:
+            if self.anomaly_threshold is None:
+                return
+
+            current_score = float(self.anomaly_detector.score_samples(x)[0])
+
+            if current_score < self.anomaly_threshold:
+                threats.append({
+                    "type": "anomaly",
+                    "score": current_score,
+                    "confidence": min(1.0, abs(current_score))
+                })
+        except NotFittedError:
+            pass
+
 
     def detect_threats(self, features):
         threats = []
@@ -89,26 +131,6 @@ class DetectionEngine:
             threats.append(port_scan_threat)
 
         # Anomaly-based detection
-        feature_vector = np.array([[
-            features['packet_size'],
-            features['packet_rate'],
-            features['byte_rate']
-        ]])
-        self.training_data.append(feature_vector.flatten())
-        clf = self.anomaly_detector.fit(self.training_data)
-        
-        try:
-            training_data_array = np.array(self.training_data)
-            anomaly_score = clf.score_samples(training_data_array)
-            threshold = np.percentile(anomaly_score, 2)
-            anomaly_mask = anomaly_score < threshold
-            if np.any(anomaly_mask):
-                threats.append({
-                    'type': 'anomaly',
-                    'score': float(np.min(anomaly_score[anomaly_mask])),
-                    'confidence': min(1.0, abs(float(np.min(anomaly_score[anomaly_mask]))))
-                })
-        except NotFittedError:
-            # Skip anomaly detection until the model is trained.
-            pass
+        self.anomaly_detection(features, threats)
+
         return threats
