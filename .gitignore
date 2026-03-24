@@ -7,3 +7,5 @@ __pycache__/*
 test_isolation_forest.ipynb
 test_packetcapture.py
 test_trafficanalyzer.py
+run_attack_lab.sh
+attack_lab.py
