@@ -12,7 +12,7 @@ Real-time intrusion detection system (IDS) built with:
 
 - Python 3.10+
 - Linux recommended for easier raw packet capture
-- Elevated privileges may be required for sniffing (`sudo` or `setcap cap_net_raw` to your venv)
+- Elevated privileges may be required for sniffing (`sudo` or `setcap cap_net_raw ./your/venv` to your venv)
 
 ## Installation
 
@@ -24,7 +24,7 @@ pip install -r requirements.txt
 
 ### Attack Scenarios Explained
 
-I have developed a script in Bash and Python, but I prefer not to publish for safety. However, you can create your own script with the internet and some tools like Nmap as a basis. I write this list just to know which attack you can develop and which IDS can detect.
+I have developed a script in Bash and Python, but I prefer not to publish for safety. However, you can create your own script with the internet or just use Nmap. I write this list just to know which attack you can develop and which IDS can detect.
 
 1. `Warmup baseline (Isolation Forest training)`
 Sends mixed benign-like UDP/TCP traffic on common service ports (53, 80, 443, 5353).
