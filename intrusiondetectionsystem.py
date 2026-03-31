@@ -5,7 +5,7 @@ from detectionengine import DetectionEngine
 from alertsystem import AlertSystem
 from plotgraph import PlotGraph
 from scapy.all import IP, TCP, UDP
-import config
+import config.
 
 class IntrusionDetectionSystem:
     def __init__(self, interface=config.IFACE):

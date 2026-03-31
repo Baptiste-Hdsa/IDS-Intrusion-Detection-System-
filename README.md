@@ -12,7 +12,7 @@ Real-time intrusion detection system (IDS) built with:
 
 - Python 3.10+
 - Linux recommended for easier raw packet capture
-- Elevated privileges may be required for sniffing (`sudo setcap cap_net_raw+ep .venv/bin/python` or just use alway `sudo`)
+- Elevated privileges may be required for sniffing (`sudo setcap cap_net_raw+ep "$(readlink -f .venv/bin/python3)"`)
 
 ## Installation
 
