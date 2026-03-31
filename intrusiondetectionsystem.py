@@ -15,24 +15,28 @@ class IntrusionDetectionSystem:
         self.alert_system = AlertSystem()
         self.plot_graph = PlotGraph()
         self.interface = interface
+        self.counter = 0
 
     def start(self):
         print(f"Starting IDS on interface {self.interface}")
+        print(f"[INFO] Anomaly detection warmup phase: disabled until {config.ANOMALY_WARMUP_SAMPLES} packets to stabilize Isolation Forest model")
         self.packet_capture.start_capture(self.interface)
 
         while True:
             try:
                 packet = self.packet_capture.packet_queue.get(timeout=1)
                 features = self.traffic_analyzer.analyze_packet(packet)
-                
+                self.counter += 1
+                print(f"Processed packet #{self.counter}")
+
                 if features:
                     threats = self.detection_engine.detect_threats(features)
-                    # anomaly_threats = [threat for threat in threats if threat.get('type') == 'anomaly']
-                    # is_anomaly = bool(anomaly_threats)
-                    # anomaly_score = min((threat.get('score', 0.0) for threat in anomaly_threats), default=0.0)
-                    # anomaly_confidence = max((threat.get('confidence', 0.0) for threat in anomaly_threats), default=0.0)
-                    # self.plot_graph.add_data_point(features, is_anomaly, anomaly_score, anomaly_confidence)
-                    # self.plot_graph.update_plot()
+                    anomaly_threats = [threat for threat in threats if threat.get('type') == 'anomaly']
+                    is_anomaly = bool(anomaly_threats)
+                    anomaly_score = min((threat.get('score', 0.0) for threat in anomaly_threats), default=0.0)
+                    anomaly_confidence = max((threat.get('confidence', 0.0) for threat in anomaly_threats), default=0.0)
+                    self.plot_graph.add_data_point(features, is_anomaly, anomaly_score, anomaly_confidence)
+                    self.plot_graph.update_plot()
 
                     for threat in threats:
                         packet_info = {

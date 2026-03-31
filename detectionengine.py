@@ -20,6 +20,8 @@ class DetectionEngine:
         self.min_train_samples = config.ANOMALY_MIN_TRAIN_SAMPLES
         self.refit_every = config.ANOMALY_REFIT_EVERY
         self.anomaly_threshold_percentile = config.ANOMALY_THRESHOLD_PERCENTILE
+        self.anomaly_score_margin = config.ANOMALY_SCORE_MARGIN
+        self.warmup_samples = config.ANOMALY_WARMUP_SAMPLES
         self.anomaly_threshold = None
         self.seen_packets = 0
         self.is_model_fitted = False
@@ -128,13 +130,17 @@ class DetectionEngine:
             )
             self.is_model_fitted = True
 
+        # Keep training during warmup but suppress anomaly alerts until baseline is stable.
+        if self.seen_packets < self.warmup_samples:
+            return
+
         try:
             if self.anomaly_threshold is None:
                 return
 
             current_score = float(self.anomaly_detector.score_samples(x)[0])
 
-            if current_score < self.anomaly_threshold:
+            if current_score < (self.anomaly_threshold - self.anomaly_score_margin):
                 threats.append({
                     "type": "anomaly",
                     "score": current_score,
