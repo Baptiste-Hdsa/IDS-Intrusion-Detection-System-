@@ -22,6 +22,15 @@ source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
+## Run
+(Before you need to add the of your network card  
+```bash 
+ip a
+``` 
+```bash
+sudo .venv/bin/python3 intrusiondetectionsystem.py
+```
+
 ### Attack Scenarios Explained
 
 I have developed a script in Bash and Python, but I prefer not to publish for safety. However, you can create your own script with the internet or just use Nmap. I write this list just to know which attack you can develop and which IDS can detect.
