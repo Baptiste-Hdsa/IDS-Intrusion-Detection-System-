@@ -21,14 +21,13 @@ python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
 ```
-
-## Run
-
-Before you need to add the of your network card  
+Before you need to add your network card's name
 ```bash 
 ip a
 ```
 Add it in the config file
+## Run
+
 ```bash
 sudo .venv/bin/python3 intrusiondetectionsystem.py
 ```
