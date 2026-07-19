@@ -23,10 +23,12 @@ pip install -r requirements.txt
 ```
 
 ## Run
-(Before you need to add the of your network card  
+
+Before you need to add the of your network card  
 ```bash 
 ip a
-``` 
+```
+Add it in the config file
 ```bash
 sudo .venv/bin/python3 intrusiondetectionsystem.py
 ```
